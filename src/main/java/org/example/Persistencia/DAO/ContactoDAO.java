@@ -13,14 +13,25 @@ import java.util.List;
 public class ContactoDAO {
 
     public Contacto save(Contacto contacto){
-        EntityManager dao= conector.getEntityManager();
+        EntityManager dao = conector.getEntityManager();
         try {
             dao.getTransaction().begin();
-            dao.persist(contacto);
+            Query query = dao.createNativeQuery("CALL guardarContacto(:nombre, :apellido, :correo, :telefono, @id)");
+            query.setParameter("nombre", contacto.getNombre());
+            query.setParameter("apellido", contacto.getApellido());
+            query.setParameter("correo", contacto.getCorreo());
+            query.setParameter("telefono", contacto.getNumeroDeTelefono());
+            query.executeUpdate();
+            
+            
+            Query idQuery = dao.createNativeQuery("SELECT @id");
+            Object result = idQuery.getSingleResult();
+            contacto.setId(Long.valueOf(result.toString()));
+            
             dao.getTransaction().commit();
-        }catch (ErrorAlEstablecerLaConexion e){
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             dao.close();
         }
         return contacto;
@@ -41,53 +52,57 @@ public class ContactoDAO {
         return lista;
     }
 
-    public List<Contacto>getAll(){
-        EntityManager dao=conector.getEntityManager();
-        List<Contacto>lista=null;
+    public List<Contacto> getAll() {
+        EntityManager dao = conector.getEntityManager();
+        List<Contacto> lista = null;
         try {
-            Query query=dao.createQuery("SELECT c FROM Contacto c");
-            lista=query.getResultList();
-        }catch (ContactoNoEncontrado e){
+            Query query = dao.createNativeQuery("CALL obtenerContactos()", Contacto.class);
+            lista = query.getResultList();
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             dao.close();
         }
         return lista;
     }
 
-    public void delete(Long id){
-        EntityManager dao=conector.getEntityManager();
+    public void delete(Long id) {
+        EntityManager dao = conector.getEntityManager();
         try {
             dao.getTransaction().begin();
-            Query query=dao.createNativeQuery("DELETE FROM contactos WHERE id=?");
-            query.setParameter(1,id);
+            Query query = dao.createNativeQuery("CALL eliminarContacto(:id)");
+            query.setParameter("id", id);
             query.executeUpdate();
             dao.getTransaction().commit();
-        }catch (ErrorEnLaConsulta e){
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             dao.close();
         }
     }
 
-    public Contacto update(Long id,Contacto contacto){
-        EntityManager dao=conector.getEntityManager();
-        Contacto contacto1=null;
+    public Contacto update(Long id, Contacto contacto) {
+        EntityManager dao = conector.getEntityManager();
+        Contacto contactoActualizado = null;
         try {
             dao.getTransaction().begin();
-            contacto1=dao.find(Contacto.class,id);
-            contacto1.setNumeroDeTelefono(contacto.getNumeroDeTelefono());
-            contacto1.setCorreo(contacto.getCorreo());
-            contacto1.setApellido(contacto.getApellido());
-            contacto1.setNombre(contacto.getNombre());
-            dao.merge(contacto1);
+            Query query = dao.createNativeQuery(
+                "CALL actualizarContacto(:id, :nombre, :apellido, :correo, :telefono)",
+                Contacto.class
+            );
+            query.setParameter("id", id);
+            query.setParameter("nombre", contacto.getNombre());
+            query.setParameter("apellido", contacto.getApellido());
+            query.setParameter("correo", contacto.getCorreo());
+            query.setParameter("telefono", contacto.getNumeroDeTelefono());
+            contactoActualizado = (Contacto) query.getSingleResult();
             dao.getTransaction().commit();
-        }catch (ErrorEnLaConsulta e){
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             dao.close();
         }
-        return contacto1;
+        return contactoActualizado;
     }
 
 
